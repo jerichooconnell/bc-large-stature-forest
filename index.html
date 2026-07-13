@@ -285,7 +285,7 @@
       Large-stature old growth (current)
     </label>
     <label class="layer-toggle">
-      <input type="checkbox" id="toggle-historical">
+      <input type="checkbox" id="toggle-historical" checked>
       Historical extent (same high site index)
     </label>
     <label class="layer-toggle">
@@ -525,13 +525,13 @@ document.getElementById('toggle-oldgrowth').addEventListener('change', e => {
   e.target.checked ? map.addLayer(oldGrowthLayer) : map.removeLayer(oldGrowthLayer);
 });
 
-// The historical layer is a large file (province-wide, ~30MB) — fetch it
-// lazily on first toggle-on rather than penalizing every visitor upfront.
+// The historical layer is a large file (province-wide, ~30MB) — fetched
+// lazily on first toggle-on so unchecking it back off costs nothing, but it
+// defaults to checked, so it loads once right after the fast initial paint.
 let historicalLoaded = false;
 let historicalLoading = null;
 const historicalToggle = document.getElementById('toggle-historical');
-historicalToggle.addEventListener('change', e => {
-  if (!e.target.checked) { map.removeLayer(historicalLayer); return; }
+function loadHistoricalLayer() {
   if (historicalLoaded) { map.addLayer(historicalLayer); historicalLayer.bringToBack(); return; }
   historicalToggle.disabled = true;
   const label = historicalToggle.closest('label');
@@ -551,7 +551,12 @@ historicalToggle.addEventListener('change', e => {
     historicalToggle.disabled = false;
     historicalToggle.checked = false;
   });
+}
+historicalToggle.addEventListener('change', e => {
+  if (!e.target.checked) { map.removeLayer(historicalLayer); return; }
+  loadHistoricalLayer();
 });
+if (historicalToggle.checked) { loadHistoricalLayer(); }
 document.getElementById('toggle-parks').addEventListener('change', e => {
   e.target.checked ? map.addLayer(parksLayer) : map.removeLayer(parksLayer);
 });
