@@ -14,22 +14,22 @@
       "protected_ha": 78.0,
       "protected_pct_of_current": 65.5
     },
-    "IDF": {
-      "historical_ha": 453803.5,
-      "current_ha": 108121.5,
-      "pct_remaining": 23.8,
-      "protected_ha": 13924.0,
-      "protected_pct_of_current": 12.9
+    "ICH": {
+      "historical_ha": 663954.3,
+      "current_ha": 81981.0,
+      "pct_remaining": 12.3,
+      "protected_ha": 14046.9,
+      "protected_pct_of_current": 17.1
     }
   },
   "site_index_p75": {
     "CWH": 23.799999237060547,
     "CDF": 30.100000381469727,
-    "IDF": 16.299999237060547
+    "ICH": 19.700000762939453
   },
-  "total_historical_ha": 1323991.8,
-  "total_current_ha": 187050.4,
-  "total_pct_remaining": 14.1,
-  "total_protected_ha": 33640.2,
-  "total_protected_pct_of_current": 18.0
+  "total_historical_ha": 1534142.6,
+  "total_current_ha": 160909.9,
+  "total_pct_remaining": 10.5,
+  "total_protected_ha": 33763.1,
+  "total_protected_pct_of_current": 21.0
 }
