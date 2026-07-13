@@ -10,12 +10,17 @@ was considered but excluded — its stands are not typically large-stature.)
 
 ## What it shows
 
-- **Large-stature old growth (current)** — VRI polygons with projected age
-  > 150 yr and `SITE_INDEX` at or above a flat cutoff of 20 m (mean height
-  at 50 yr breast-height age), applied the same across all three zones.
-- **Historical extent** — the same high-site-index land base, including
-  stands now logged/regenerating (toggleable, lazy-loaded — it's a large
-  province-wide layer).
+- **Large-stature old growth (current)** — individual VRI stand polygons
+  with projected age > 150 yr and `SITE_INDEX` at or above the 75th
+  percentile for their BEC zone. Each stand keeps its own exact site index
+  and is shaded by percentile tier within its zone — top 25% (≥75th),
+  top 15% (≥85th), or top 5% (≥95th) — darker meaning a higher site index
+  relative to other stands in the same zone. Click any patch for its exact
+  value, age, and area.
+- **Historical extent** — the same 75th-percentile-floor land base,
+  including stands now logged/regenerating (toggleable, lazy-loaded — it's
+  a large province-wide layer; shown as a coarse dissolved background, not
+  per-stand).
 - **Protected areas** — provincial parks, ecological reserves, conservancies,
   and national parks (BC Data Catalogue).
 - **Historical fire perimeters** — BC wildfire history layer.
@@ -26,14 +31,15 @@ was considered but excluded — its stands are not typically large-stature.)
 
 ## Performance
 
-The current-old-growth and historical layers are both large province-wide
-datasets (tens of thousands of polygons), so the page uses two techniques
-to stay fast:
+The current-old-growth layer is ~14,000 individual VRI stand polygons and
+the historical layer is a large dissolved province-wide background — both
+kept fast with:
 
-- **Overview/detail split** — only patches ≥50ha (`data/current_overview.geojson`,
-  ~5MB) load on first paint. Patches down to 2ha (`data/current_detail.geojson`,
-  ~15MB) fetch lazily the first time you zoom in past level 9. The historical
-  layer (~45MB) only fetches at all once you toggle it on.
+- **Overview/detail split** — only patches ≥20ha (`data/current_overview.geojson`,
+  ~4MB) load on first paint. Patches down to the 75th-percentile floor
+  (`data/current_detail.geojson`, ~10MB) fetch lazily the first time you
+  zoom in past level 9. The historical layer (~30MB) only fetches at all
+  once you toggle it on.
 - **Zoom-dependent thinning** — even after data is loaded, only patches above
   a per-zoom-level area threshold are drawn (smaller patches reveal as you
   zoom in), and all vector layers render on `<canvas>` rather than SVG.

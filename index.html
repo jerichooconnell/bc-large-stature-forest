@@ -297,24 +297,33 @@
       Historical fire boundaries
     </label>
 
-    <div class="section-label">Legend</div>
-    <div class="legend-row"><span class="legend-swatch" style="background:var(--cwh)"></span> CWH old growth</div>
-    <div class="legend-row"><span class="legend-swatch" style="background:var(--cdf)"></span> CDF old growth</div>
-    <div class="legend-row"><span class="legend-swatch" style="background:var(--ich)"></span> ICH old growth</div>
+    <div class="section-label">Legend — zone</div>
+    <div class="legend-row"><span class="legend-swatch" style="background:var(--cwh)"></span> CWH</div>
+    <div class="legend-row"><span class="legend-swatch" style="background:var(--cdf)"></span> CDF</div>
+    <div class="legend-row"><span class="legend-swatch" style="background:var(--ich)"></span> ICH</div>
+
+    <div class="section-label">Legend — site index tier</div>
+    <div class="legend-row"><span class="legend-swatch" style="background:var(--cwh); opacity:0.4"></span> Top 25% (≥ 75th pct.)</div>
+    <div class="legend-row"><span class="legend-swatch" style="background:var(--cwh); opacity:0.65"></span> Top 15% (≥ 85th pct.)</div>
+    <div class="legend-row"><span class="legend-swatch" style="background:var(--cwh); opacity:0.9"></span> Top 5% (≥ 95th pct.)</div>
+    <p class="subtitle" style="margin:2px 0 0">Darker = higher site index relative to other stands in the same zone. Click any patch for its exact value.</p>
+
+    <div class="section-label">Legend — other layers</div>
     <div class="legend-row"><span class="legend-line" style="border-color:var(--historical)"></span> Historical extent</div>
     <div class="legend-row"><span class="legend-line" style="border-color:var(--protected)"></span> Protected area boundary</div>
     <div class="legend-row"><span class="legend-line" style="border-color:var(--fire)"></span> Fire perimeter</div>
 
     <div class="note">
       <p><b>Definitions.</b> "Large-stature old growth" = VRI polygons with
-      projected age &gt;150 yr and SITE_INDEX at or above a flat cutoff of
-      <span id="thresholds-text">–</span> (mean height at 50 yr
-      breast-height age), the same cutoff applied to all three zones. The
-      historical extent is this same old-growth
-      total plus stands on equivalently high-site ground that carry an
-      explicit harvest record (HARVEST_DATE / opening indicators) — it
-      excludes naturally young, never-logged stands so natural disturbance
-      history isn't counted as loss.</p>
+      projected age &gt;150 yr and SITE_INDEX at or above the 75th
+      percentile for their BEC zone (<span id="thresholds-text">–</span>).
+      Patches are shaded by their percentile tier — 75th–85th, 85th–95th,
+      or 95th+ — computed separately per zone from the full forest-capable
+      land base. The historical extent is this same old-growth total (75th
+      percentile floor) plus stands on equivalently high-site ground that
+      carry an explicit harvest record (HARVEST_DATE / opening indicators)
+      — it excludes naturally young, never-logged stands so natural
+      disturbance history isn't counted as loss.</p>
       <p>Source: BC VRI (VEG_COMP_LYR_R1_POLY, provincial), BC Data
       Catalogue protected-lands layers, and BC historical fire perimeters.
       Built from the <a href="https://github.com/jerichooconnell/yew_project" target="_blank" rel="noopener">yew_project</a>
@@ -366,13 +375,23 @@ function minAreaForZoom(zoom, tiers) {
   }
   return 0;
 }
-const OLDGROWTH_TIERS = [[6, 300], [7, 100], [8, 50]];
+const OLDGROWTH_TIERS = [[6, 100], [7, 50], [8, 20]];
 const HISTORICAL_TIERS = [[6, 500], [7, 150], [8, 50], [9, 15]];
-const OLDGROWTH_DETAIL_ZOOM = 9; // patches below the 50ha overview cutoff only exist in the lazy-loaded detail file
+const OLDGROWTH_DETAIL_ZOOM = 9; // patches below the 20ha overview cutoff only exist in the lazy-loaded detail file
 
 function areaPopup(label, f) {
   const ha = f.properties.area_ha;
   return `<b>${f.properties.BEC_ZONE_CODE}</b> ${label}${ha ? '<br>' + ha.toLocaleString() + ' ha' : ''}`;
+}
+
+const TIER_OPACITY = { 1: 0.4, 2: 0.65, 3: 0.9 };
+const TIER_LABEL = { 1: 'Top 25% (≥ 75th pct.)', 2: 'Top 15% (≥ 85th pct.)', 3: 'Top 5% (≥ 95th pct.)' };
+function oldGrowthPopup(f) {
+  const p = f.properties;
+  return `<b>${p.BEC_ZONE_CODE}</b> large-stature old growth`
+       + `<br>Site index: <b>${p.SITE_INDEX} m</b> (${TIER_LABEL[p.tier] || ''})`
+       + `<br>Age: ${p.age} yr`
+       + (p.area_ha ? `<br>Patch area: ${p.area_ha.toLocaleString()} ha` : '');
 }
 
 const historicalLayer = L.geoJSON(null, {
@@ -394,12 +413,12 @@ const oldGrowthLayer = L.geoJSON(null, {
   filter: f => f.properties.area_ha >= minAreaForZoom(map.getZoom(), OLDGROWTH_TIERS),
   style: f => ({
     color: zoneColor(f.properties.BEC_ZONE_CODE),
-    weight: 1,
+    weight: 0.5,
     fillColor: zoneColor(f.properties.BEC_ZONE_CODE),
-    fillOpacity: 0.55,
+    fillOpacity: TIER_OPACITY[f.properties.tier] || 0.4,
   }),
   onEachFeature: (f, layer) => {
-    layer.bindPopup(areaPopup('large-stature old growth', f));
+    layer.bindPopup(oldGrowthPopup(f));
   }
 }).addTo(map);
 let oldGrowthOverviewFeatures = [];
@@ -515,8 +534,11 @@ function renderStats(stats) {
   document.getElementById('stat-pct-protected').textContent = fmtPct(stats.total_protected_pct_of_current);
 
   const zoneNames = { CWH: 'Coastal Western Hemlock', CDF: 'Coastal Douglas-fir', ICH: 'Interior Cedar-Hemlock' };
-  if (stats.site_index_cutoff != null) {
-    document.getElementById('thresholds-text').textContent = `≥${stats.site_index_cutoff.toFixed(0)} m, all zones`;
+  if (stats.site_index_tiers) {
+    const parts = ['CWH', 'CDF', 'ICH']
+      .filter(z => stats.site_index_tiers[z])
+      .map(z => `${z} ≥${stats.site_index_tiers[z].p75} m`);
+    document.getElementById('thresholds-text').textContent = parts.join(', ');
   }
   const container = document.getElementById('zone-blocks');
   container.innerHTML = '';

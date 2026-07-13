@@ -1,31 +1,47 @@
 {
   "zones": {
     "CWH": {
-      "historical_ha": 1416994.9,
-      "current_ha": 264963.4,
-      "pct_remaining": 18.7,
-      "protected_ha": 68058.9,
-      "protected_pct_of_current": 25.7
+      "historical_ha": 868617.6,
+      "current_ha": 78809.8,
+      "pct_remaining": 9.1,
+      "protected_ha": 19649.5,
+      "protected_pct_of_current": 24.9
     },
     "CDF": {
-      "historical_ha": 6310.8,
-      "current_ha": 3535.0,
-      "pct_remaining": 56.0,
-      "protected_ha": 826.5,
-      "protected_pct_of_current": 23.4
+      "historical_ha": 1570.7,
+      "current_ha": 119.1,
+      "pct_remaining": 7.6,
+      "protected_ha": 77.7,
+      "protected_pct_of_current": 65.2
     },
     "ICH": {
-      "historical_ha": 645447.1,
-      "current_ha": 69937.2,
-      "pct_remaining": 10.8,
-      "protected_ha": 12581.7,
-      "protected_pct_of_current": 18.0
+      "historical_ha": 663954.3,
+      "current_ha": 81981.0,
+      "pct_remaining": 12.3,
+      "protected_ha": 14077.0,
+      "protected_pct_of_current": 17.2
     }
   },
-  "site_index_cutoff": 20.0,
-  "total_historical_ha": 2068752.9,
-  "total_current_ha": 338435.6,
-  "total_pct_remaining": 16.4,
-  "total_protected_ha": 81467.1,
-  "total_protected_pct_of_current": 24.1
+  "site_index_tiers": {
+    "CWH": {
+      "p75": 23.8,
+      "p85": 27.1,
+      "p95": 32.1
+    },
+    "CDF": {
+      "p75": 30.1,
+      "p85": 31.5,
+      "p95": 33.9
+    },
+    "ICH": {
+      "p75": 19.7,
+      "p85": 21.0,
+      "p95": 24.0
+    }
+  },
+  "total_historical_ha": 1534142.6,
+  "total_current_ha": 160909.9,
+  "total_pct_remaining": 10.5,
+  "total_protected_ha": 33804.1,
+  "total_protected_pct_of_current": 21.0
 }
