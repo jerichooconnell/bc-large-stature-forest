@@ -398,9 +398,18 @@ function minAreaForZoom(zoom, tiers) {
 const OLDGROWTH_TIERS = [[6, 100], [7, 50], [8, 20]];
 const OLDGROWTH_DETAIL_ZOOM = 9; // patches below the 20ha overview cutoff only exist in the lazy-loaded detail file
 
-function areaPopup(label, f) {
-  const ha = f.properties.area_ha;
-  return `<b>${f.properties.BEC_ZONE_CODE}</b> ${label}${ha ? '<br>' + ha.toLocaleString() + ' ha' : ''}`;
+function historicalPopup(f) {
+  const p = f.properties;
+  // this is a dissolved zone-level blob, not one stand, so there's no single
+  // SITE_INDEX -- show the median across the underlying stands instead. Min/max
+  // are skipped: a handful of source records carry implausible site-index
+  // outliers (>60m) that would dominate a min-max range and mislead more than help.
+  return `<b>${p.BEC_ZONE_CODE}</b> historical high-site-index extent`
+       + (p.site_index_median != null
+           ? `<br>Site index: median <b>${p.site_index_median} m</b> across this zone's`
+             + ` historical stands (≥ 75th pct. floor, mean ${p.site_index_mean} m)`
+           : '')
+       + (p.area_ha ? `<br>Total extent: ${p.area_ha.toLocaleString()} ha` : '');
 }
 
 const TIER_LABEL = { 1: 'Top 25% (≥ 75th pct.)', 2: 'Top 15% (≥ 85th pct.)', 3: 'Top 5% (≥ 95th pct.)' };
@@ -427,7 +436,7 @@ const historicalLayer = L.geoJSON(null, {
     fillOpacity: 0.12,
   }),
   onEachFeature: (f, layer) => {
-    layer.bindPopup(areaPopup('historical high-site-index extent', f));
+    layer.bindPopup(historicalPopup(f));
   }
 });
 let historicalData = null;
