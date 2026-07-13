@@ -279,6 +279,7 @@
     </label>
 
     <div class="section-label">Map layers</div>
+    <p class="subtitle" style="margin:-2px 0 10px">Zoom in to reveal smaller patches — only the largest draw at province-wide zoom, for speed.</p>
     <label class="layer-toggle">
       <input type="checkbox" id="toggle-oldgrowth" checked>
       Large-stature old growth (current)
@@ -306,9 +307,10 @@
 
     <div class="note">
       <p><b>Definitions.</b> "Large-stature old growth" = VRI polygons with
-      projected age &gt;150 yr and SITE_INDEX at or above the 75th percentile
-      for their BEC zone (<span id="thresholds-text">–</span> @ 50 yr
-      breast-height age). The historical extent is this same old-growth
+      projected age &gt;150 yr and SITE_INDEX at or above a flat cutoff of
+      <span id="thresholds-text">–</span> (mean height at 50 yr
+      breast-height age), the same cutoff applied to all three zones. The
+      historical extent is this same old-growth
       total plus stands on equivalently high-site ground that carry an
       explicit harvest record (HARVEST_DATE / opening indicators) — it
       excludes naturally young, never-logged stands so natural disturbance
@@ -327,7 +329,7 @@
 const fmtHa = n => n == null ? "–" : Math.round(n).toLocaleString() + " ha";
 const fmtPct = n => n == null ? "–" : n.toFixed(1) + "%";
 
-const map = L.map('map', { zoomControl: true }).setView([53.5, -125.5], 6);
+const map = L.map('map', { zoomControl: true, preferCanvas: true }).setView([53.5, -125.5], 6);
 
 const satelliteBasemap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
   attribution: 'Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics',
@@ -355,7 +357,26 @@ function zoneColor(z) {
   ).trim() || ZONE_COLOR[z];
 }
 
+// Zoom-dependent thinning: at province-wide zoom only the largest patches
+// draw; smaller ones reveal as the user zooms in. Keeps initial paint fast
+// without ever hiding data permanently — it's all there once you zoom in.
+function minAreaForZoom(zoom, tiers) {
+  for (const [maxZoom, minHa] of tiers) {
+    if (zoom <= maxZoom) return minHa;
+  }
+  return 0;
+}
+const OLDGROWTH_TIERS = [[6, 300], [7, 100], [8, 50]];
+const HISTORICAL_TIERS = [[6, 500], [7, 150], [8, 50], [9, 15]];
+const OLDGROWTH_DETAIL_ZOOM = 9; // patches below the 50ha overview cutoff only exist in the lazy-loaded detail file
+
+function areaPopup(label, f) {
+  const ha = f.properties.area_ha;
+  return `<b>${f.properties.BEC_ZONE_CODE}</b> ${label}${ha ? '<br>' + ha.toLocaleString() + ' ha' : ''}`;
+}
+
 const historicalLayer = L.geoJSON(null, {
+  filter: f => f.properties.area_ha >= minAreaForZoom(map.getZoom(), HISTORICAL_TIERS),
   style: f => ({
     color: getComputedStyle(document.documentElement).getPropertyValue('--historical').trim() || '#898781',
     weight: 1,
@@ -364,11 +385,13 @@ const historicalLayer = L.geoJSON(null, {
     fillOpacity: 0.12,
   }),
   onEachFeature: (f, layer) => {
-    layer.bindPopup(`<b>${f.properties.BEC_ZONE_CODE}</b> historical high-site-index extent`);
+    layer.bindPopup(areaPopup('historical high-site-index extent', f));
   }
 });
+let historicalData = null;
 
 const oldGrowthLayer = L.geoJSON(null, {
+  filter: f => f.properties.area_ha >= minAreaForZoom(map.getZoom(), OLDGROWTH_TIERS),
   style: f => ({
     color: zoneColor(f.properties.BEC_ZONE_CODE),
     weight: 1,
@@ -376,9 +399,34 @@ const oldGrowthLayer = L.geoJSON(null, {
     fillOpacity: 0.55,
   }),
   onEachFeature: (f, layer) => {
-    layer.bindPopup(`<b>${f.properties.BEC_ZONE_CODE}</b> large-stature old growth`);
+    layer.bindPopup(areaPopup('large-stature old growth', f));
   }
 }).addTo(map);
+let oldGrowthOverviewFeatures = [];
+let oldGrowthDetailFeatures = null;
+let oldGrowthDetailLoading = null;
+
+function refreshOldGrowth() {
+  const combined = oldGrowthDetailFeatures
+    ? oldGrowthOverviewFeatures.concat(oldGrowthDetailFeatures)
+    : oldGrowthOverviewFeatures;
+  oldGrowthLayer.clearLayers();
+  oldGrowthLayer.addData(combined);
+}
+
+function maybeLoadOldGrowthDetail() {
+  if (map.getZoom() < OLDGROWTH_DETAIL_ZOOM || oldGrowthDetailFeatures || oldGrowthDetailLoading) return;
+  oldGrowthDetailLoading = fetch('data/current_detail.geojson').then(r => r.json()).then(gj => {
+    oldGrowthDetailFeatures = gj.features;
+    refreshOldGrowth();
+  }).catch(err => console.error('Failed to load old-growth detail layer', err));
+}
+
+map.on('zoomend', () => {
+  refreshOldGrowth();
+  maybeLoadOldGrowthDetail();
+  if (historicalData && map.hasLayer(historicalLayer)) { historicalLayer.clearLayers(); historicalLayer.addData(historicalData); }
+});
 
 const parksLayer = L.geoJSON(null, {
   style: {
@@ -407,12 +455,14 @@ const fireLayer = L.geoJSON(null, {
 });
 
 Promise.all([
-  fetch('data/large_stature_old_growth.geojson').then(r => r.json()),
+  fetch('data/current_overview.geojson').then(r => r.json()),
   fetch('data/park_contours.geojson').then(r => r.json()),
   fetch('data/fire_contours.geojson').then(r => r.json()),
   fetch('data/stats.json').then(r => r.json()),
 ]).then(([og, parks, fires, stats]) => {
-  oldGrowthLayer.addData(og);
+  oldGrowthOverviewFeatures = og.features;
+  refreshOldGrowth();
+  maybeLoadOldGrowthDetail();
   parksLayer.addData(parks);
   fireLayer.addData(fires);
   renderStats(stats);
@@ -438,6 +488,7 @@ historicalToggle.addEventListener('change', e => {
   label.lastChild.textContent = ' Loading historical extent…';
   historicalLoading = historicalLoading || fetch('data/historical_large_stature.geojson').then(r => r.json());
   historicalLoading.then(hist => {
+    historicalData = hist;
     historicalLayer.addData(hist);
     historicalLoaded = true;
     label.lastChild.textContent = originalText;
@@ -464,11 +515,8 @@ function renderStats(stats) {
   document.getElementById('stat-pct-protected').textContent = fmtPct(stats.total_protected_pct_of_current);
 
   const zoneNames = { CWH: 'Coastal Western Hemlock', CDF: 'Coastal Douglas-fir', ICH: 'Interior Cedar-Hemlock' };
-  if (stats.site_index_p75) {
-    const parts = ['CWH', 'CDF', 'ICH']
-      .filter(z => stats.site_index_p75[z] != null)
-      .map(z => `${z} ≥${stats.site_index_p75[z].toFixed(1)} m`);
-    document.getElementById('thresholds-text').textContent = parts.join(', ');
+  if (stats.site_index_cutoff != null) {
+    document.getElementById('thresholds-text').textContent = `≥${stats.site_index_cutoff.toFixed(0)} m, all zones`;
   }
   const container = document.getElementById('zone-blocks');
   container.innerHTML = '';
