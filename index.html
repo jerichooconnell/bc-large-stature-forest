@@ -303,10 +303,10 @@
     <div class="legend-row"><span class="legend-swatch" style="background:var(--ich)"></span> ICH</div>
 
     <div class="section-label">Legend — site index tier</div>
-    <div class="legend-row"><span class="legend-swatch" style="background:var(--cwh); opacity:0.4"></span> Top 25% (≥ 75th pct.)</div>
-    <div class="legend-row"><span class="legend-swatch" style="background:var(--cwh); opacity:0.65"></span> Top 15% (≥ 85th pct.)</div>
-    <div class="legend-row"><span class="legend-swatch" style="background:var(--cwh); opacity:0.9"></span> Top 5% (≥ 95th pct.)</div>
-    <p class="subtitle" style="margin:2px 0 0">Darker = higher site index relative to other stands in the same zone. Click any patch for its exact value.</p>
+    <div class="legend-row"><span class="legend-swatch" id="tier-swatch-1"></span> Top 25% (≥ 75th pct.)</div>
+    <div class="legend-row"><span class="legend-swatch" id="tier-swatch-2"></span> Top 15% (≥ 85th pct.)</div>
+    <div class="legend-row"><span class="legend-swatch" id="tier-swatch-3"></span> Top 5% (≥ 95th pct.)</div>
+    <p class="subtitle" style="margin:2px 0 0">Darker/more saturated = higher site index relative to other stands in the same zone. Click any patch for its exact value.</p>
 
     <div class="section-label">Legend — other layers</div>
     <div class="legend-row"><span class="legend-line" style="border-color:var(--historical)"></span> Historical extent</div>
@@ -366,6 +366,26 @@ function zoneColor(z) {
   ).trim() || ZONE_COLOR[z];
 }
 
+// Mix a hex color toward white (positive percent) or black (negative percent).
+// Used to turn each zone's single hue into a real light/mid/dark ramp for the
+// site-index tiers — opacity alone reads inconsistently against a varying
+// satellite basemap, a fixed-lightness ramp doesn't.
+function shadeColor(hex, percent) {
+  hex = hex.trim();
+  const num = parseInt(hex.slice(1), 16);
+  let r = (num >> 16) & 0xff, g = (num >> 8) & 0xff, b = num & 0xff;
+  const target = percent < 0 ? 0 : 255;
+  const p = Math.abs(percent) / 100;
+  r = Math.round((target - r) * p + r);
+  g = Math.round((target - g) * p + g);
+  b = Math.round((target - b) * p + b);
+  return '#' + [r, g, b].map(x => Math.max(0, Math.min(255, x)).toString(16).padStart(2, '0')).join('');
+}
+const TIER_SHADE = { 1: 42, 2: 0, 3: -38 };
+function tierColor(zone, tier) {
+  return shadeColor(zoneColor(zone), TIER_SHADE[tier] ?? 0);
+}
+
 // Zoom-dependent thinning: at province-wide zoom only the largest patches
 // draw; smaller ones reveal as the user zooms in. Keeps initial paint fast
 // without ever hiding data permanently — it's all there once you zoom in.
@@ -384,8 +404,11 @@ function areaPopup(label, f) {
   return `<b>${f.properties.BEC_ZONE_CODE}</b> ${label}${ha ? '<br>' + ha.toLocaleString() + ' ha' : ''}`;
 }
 
-const TIER_OPACITY = { 1: 0.4, 2: 0.65, 3: 0.9 };
 const TIER_LABEL = { 1: 'Top 25% (≥ 75th pct.)', 2: 'Top 15% (≥ 85th pct.)', 3: 'Top 5% (≥ 95th pct.)' };
+for (const t of [1, 2, 3]) {
+  const el = document.getElementById(`tier-swatch-${t}`);
+  if (el) el.style.background = tierColor('CWH', t);
+}
 function oldGrowthPopup(f) {
   const p = f.properties;
   return `<b>${p.BEC_ZONE_CODE}</b> large-stature old growth`
@@ -412,10 +435,10 @@ let historicalData = null;
 const oldGrowthLayer = L.geoJSON(null, {
   filter: f => f.properties.area_ha >= minAreaForZoom(map.getZoom(), OLDGROWTH_TIERS),
   style: f => ({
-    color: zoneColor(f.properties.BEC_ZONE_CODE),
-    weight: 0.5,
-    fillColor: zoneColor(f.properties.BEC_ZONE_CODE),
-    fillOpacity: TIER_OPACITY[f.properties.tier] || 0.4,
+    color: shadeColor(zoneColor(f.properties.BEC_ZONE_CODE), -55),
+    weight: 0.6,
+    fillColor: tierColor(f.properties.BEC_ZONE_CODE, f.properties.tier),
+    fillOpacity: 0.82,
   }),
   onEachFeature: (f, layer) => {
     layer.bindPopup(oldGrowthPopup(f));
