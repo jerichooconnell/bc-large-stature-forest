@@ -1,0 +1,35 @@
+{
+  "zones": {
+    "CWH": {
+      "historical_ha": 868617.6,
+      "current_ha": 78809.8,
+      "pct_remaining": 9.1,
+      "protected_ha": 19638.2,
+      "protected_pct_of_current": 24.9
+    },
+    "CDF": {
+      "historical_ha": 1570.7,
+      "current_ha": 119.1,
+      "pct_remaining": 7.6,
+      "protected_ha": 78.0,
+      "protected_pct_of_current": 65.5
+    },
+    "IDF": {
+      "historical_ha": 453803.5,
+      "current_ha": 108121.5,
+      "pct_remaining": 23.8,
+      "protected_ha": 13924.0,
+      "protected_pct_of_current": 12.9
+    }
+  },
+  "site_index_p75": {
+    "CWH": 23.799999237060547,
+    "CDF": 30.100000381469727,
+    "IDF": 16.299999237060547
+  },
+  "total_historical_ha": 1323991.8,
+  "total_current_ha": 187050.4,
+  "total_pct_remaining": 14.1,
+  "total_protected_ha": 33640.2,
+  "total_protected_pct_of_current": 18.0
+}
